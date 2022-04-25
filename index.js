@@ -13,7 +13,10 @@ const data ={
     age:23,
     height:"180cm"
 }
-const url = "mongodb+srv://mongouser1:XfpH7JvvVOiHtPIs@cluster0.shiwe.mongodb.net/myFirstDatabase?retryWrites=true&w=majority";
+const user = process.env.MONGO_USER;
+const password = process.env.MONGO_PASS;
+//console.log(user);
+const url = `mongodb+srv://${user}:${password}@cluster0.shiwe.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`;
 const client = new MongoClient(url);
 async function run(){
     try {
