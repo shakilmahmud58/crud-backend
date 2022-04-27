@@ -130,7 +130,7 @@ async function run(){
 }
 run();
 
-app.get('/data',(req,res)=>{
+app.get('/',(req,res)=>{
     res.send('data');
 })
 const port = 5000;
