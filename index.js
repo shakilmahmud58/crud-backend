@@ -1,6 +1,24 @@
+// const express =require('express');
+
+// const app = express();
+// const {connectDB,User} =require('./database/connection')
+// connectDB();
+
+// app.get('/get',async(req,res)=>{
+//                 await connectDB.collection.find().toArray((err,result)=>{
+//                 if(err)
+//                    console.log(err);
+//                 else
+//                 {
+//                     res.send(result);
+//                 }
+//             })
+// })
 const express = require("express");
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 const bodyParser= require('body-parser');
+const {auth, verifyToken}  = require('./middleware/auth');
 require('dotenv').config();
 const app = express();
 app.use(cors());
@@ -8,11 +26,11 @@ app.use(bodyParser.urlencoded({extended:false}));
 app.use(bodyParser.json());
 
 const { MongoClient, ObjectId } = require('mongodb');
-const data ={
-    name:"Shakil",
-    age:23,
-    height:"180cm"
-}
+// const data ={
+//     name:"Shakil",
+//     age:23,
+//     height:"180cm"
+// }
 const user = process.env.MONGO_USER;
 const password = process.env.MONGO_PASS;
 //console.log(user);
@@ -23,6 +41,7 @@ async function run(){
         await client.connect();
         const database = client.db("selise");
         const collection = database.collection("student");
+        const User = database.collection("user");
         console.log("success");
        
        
@@ -31,20 +50,22 @@ async function run(){
                 if(err)
                    console.log(err);
                 else
-                   res.send(result);
+                {
+                    res.send(result);
+                }
             })
         })
-        app.post('/adduser',async(req,res)=>{
+        app.post('/adduser', verifyToken ,async(req,res)=>{
             //var name=req.body.name;
             try {
                 await collection.insertOne(req.body);
-                res.send({status:200});     
+                res.send({status:200,data:req.body});     
             } catch (error) {
                 res.send(error);
             }
 
         })
-        app.post('/deleteUser',async(req,res)=>{
+        app.post('/deleteUser',verifyToken,async(req,res)=>{
             var id = req.body.id;
             try {
                  await collection.deleteOne({"_id": ObjectId(id)});
@@ -53,7 +74,7 @@ async function run(){
                 res.send(error);
             }
         })
-        app.post('/editUser',async(req,res)=>{
+        app.post('/editUser',verifyToken,async(req,res)=>{
             var id = req.body._id;
             try {
                  await collection.updateOne({"_id": ObjectId(id)},
@@ -63,6 +84,45 @@ async function run(){
                 res.send(error);
             }
         })
+       
+        //sign up related
+
+        const payload={ name:"shakil", admin:false };
+        const secret = process.env.SECRET;
+        app.get('/isloggedin',verifyToken, (req,res)=>{
+            res.send({status:true});
+        })
+        app.post('/loggedin',verifyToken, (req,res)=>{
+            res.send({status:true});
+        })
+        app.post('/signup',async(req,res)=>{
+            const newUser = req.body;
+            const x = await User.findOne({email:newUser.email});
+            if(x==null)
+            {
+                await User.insertOne(req.body);
+                res.send({status:1})
+            }
+            else
+            {
+                res.send({status:0});
+            }
+        })
+        app.post('/login' ,async(req,res)=>{
+            const user = req.body;
+            const legalUser = await User.findOne({email:user.email, pass:user.pass});
+            if(legalUser==null)
+            {
+                res.send({token:null})
+            }
+            else
+            {
+                //console.log(user);
+                const token = jwt.sign(payload,secret,{expiresIn:"2h"});
+                res.send({token});
+            }
+
+        })
 
     } catch (error) {
         console.log(error);
@@ -71,7 +131,7 @@ async function run(){
 run();
 
 app.get('/data',(req,res)=>{
-    res.send(data);
+    res.send('data');
 })
 const port = 5000;
 app.listen(port,()=>{
